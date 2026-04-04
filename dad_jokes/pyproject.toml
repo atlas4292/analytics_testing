@@ -1,0 +1,9 @@
+[tool.dg]
+directory_type = "project" 
+
+[tool.dg.project]
+root_module = "dad_jokes"
+code_location_target_module = "dad_jokes.definitions"
+
+[project.entry-points]
+"dagster_dg_cli.registry_modules" = { my_existing_project = "my_existing_project.components"}

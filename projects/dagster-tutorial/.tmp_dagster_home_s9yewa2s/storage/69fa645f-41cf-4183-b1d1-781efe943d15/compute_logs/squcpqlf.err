@@ -1,0 +1,7 @@
+[32m2026-04-05 13:19:41 -0400[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 69fa645f-41cf-4183-b1d1-781efe943d15 - 63699 - LOGS_CAPTURED - Started capturing logs in process (pid: 63699).
+[32m2026-04-05 13:19:41 -0400[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 69fa645f-41cf-4183-b1d1-781efe943d15 - 63699 - customers - STEP_START - Started execution of step "customers".
+[32m2026-04-05 13:19:41 -0400[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 69fa645f-41cf-4183-b1d1-781efe943d15 - 63699 - customers - STEP_OUTPUT - Yielded output "result" of type "String". (Type check passed).
+[32m2026-04-05 13:19:41 -0400[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 69fa645f-41cf-4183-b1d1-781efe943d15 - customers - Writing file at: /Users/atlas4292/Projects_Local/auricai_data/projects/dagster-tutorial/.tmp_dagster_home_s9yewa2s/storage/customers using PickledObjectFilesystemIOManager...
+[32m2026-04-05 13:19:41 -0400[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 69fa645f-41cf-4183-b1d1-781efe943d15 - 63699 - customers - ASSET_MATERIALIZATION - Materialized value customers.
+[32m2026-04-05 13:19:41 -0400[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 69fa645f-41cf-4183-b1d1-781efe943d15 - 63699 - customers - HANDLED_OUTPUT - Handled output "result" using IO manager "io_manager"
+[32m2026-04-05 13:19:41 -0400[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 69fa645f-41cf-4183-b1d1-781efe943d15 - 63699 - customers - STEP_SUCCESS - Finished execution of step "customers" in 30ms.

@@ -1,5 +1,8 @@
 {
     "chat.tools.terminal.autoApprove": {
         "uv": true
+    },
+    "files.watcherExclude": {
+        "**/target": true
     }
 }

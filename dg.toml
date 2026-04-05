@@ -1,0 +1,13 @@
+directory_type = "workspace"
+
+[workspace]
+
+[[workspace.projects]]
+path = "projects/dagster-tutorial"
+
+
+[[workspace.projects]]
+path = "projects/dad-jokes"
+
+[[workspace.projects]]
+path = "projects/dbt-test"

@@ -5,14 +5,13 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "chroma>=0.2.0",
     "dagster>=1.12.22",
     "dagster-dbt>=0.28.22",
     "dagster-dg-cli>=1.12.22",
     "dbt-duckdb>=1.10.1",
     "ruff>=0.15.9",
 ]
-[tool.dg]
-directory_type = "workspace" 
 
-[[tool.dg.workspace.projects]]
-path = "dad_jokes"
+[tool.dg]
+directory_type = "deployment" 

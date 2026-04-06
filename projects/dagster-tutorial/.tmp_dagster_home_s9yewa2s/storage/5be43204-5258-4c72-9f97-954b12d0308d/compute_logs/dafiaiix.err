@@ -1,0 +1,26 @@
+[32m2026-04-05 22:04:28 -0400[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 5be43204-5258-4c72-9f97-954b12d0308d - 15521 - LOGS_CAPTURED - Started capturing logs in process (pid: 15521).
+[32m2026-04-05 22:04:28 -0400[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 5be43204-5258-4c72-9f97-954b12d0308d - 15521 - florida_real_estate - STEP_START - Started execution of step "florida_real_estate".
+[32m2026-04-05 22:04:28 -0400[0m - dagster - [34mERROR[0m - [31m__ASSET_JOB - 5be43204-5258-4c72-9f97-954b12d0308d - 15521 - florida_real_estate - STEP_FAILURE - Execution of step "florida_real_estate" failed.
+
+dagster._core.errors.DagsterExecutionStepExecutionError: Error occurred while executing op "florida_real_estate"::
+
+_duckdb.IOException: IO Error: No files found that match the pattern "../data/florida_real_estate.csv"
+
+LINE 4:             FROM read_csv_auto('../data/florida_real_estate.csv')
+                         ^
+
+Stack Trace:
+  File "/Users/atlas4292/Projects_Local/auricai_data/projects/dagster-tutorial/.venv/lib/python3.12/site-packages/dagster/_core/execution/plan/utils.py", line 57, in op_execution_error_boundary
+    yield
+  File "/Users/atlas4292/Projects_Local/auricai_data/projects/dagster-tutorial/.venv/lib/python3.12/site-packages/dagster/_utils/__init__.py", line 394, in iterate_with_context
+    next_output = next(iterator)
+                  ^^^^^^^^^^^^^^
+  File "/Users/atlas4292/Projects_Local/auricai_data/projects/dagster-tutorial/.venv/lib/python3.12/site-packages/dagster/_core/execution/plan/compute_generator.py", line 135, in _coerce_op_compute_fn_to_iterator
+    result = invoke_compute_fn(
+             ^^^^^^^^^^^^^^^^^^
+  File "/Users/atlas4292/Projects_Local/auricai_data/projects/dagster-tutorial/.venv/lib/python3.12/site-packages/dagster/_core/execution/plan/compute_generator.py", line 115, in invoke_compute_fn
+    return fn(context, **args_to_pass) if context_arg_provided else fn(**args_to_pass)
+                                                                    ^^^^^^^^^^^^^^^^^^
+  File "/Users/atlas4292/Projects_Local/auricai_data/projects/dagster-tutorial/src/dagster_tutorial/defs/assets.py", line 26, in florida_real_estate
+    conn.execute(
+[0m

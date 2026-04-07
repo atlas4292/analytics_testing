@@ -1,3 +1,6 @@
+# Dagster
+projects/dagster-tutorial/.tmp_*
+
 # Virtual environments
 .venv
 

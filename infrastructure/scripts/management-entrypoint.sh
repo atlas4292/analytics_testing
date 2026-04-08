@@ -6,7 +6,7 @@ PG_DATA="/var/lib/postgresql/${PG_VERSION}/main"
 PG_BIN="/usr/lib/postgresql/${PG_VERSION}/bin"
 PG_LOG="/var/log/postgresql/postgresql-${PG_VERSION}.log"
 
-echo "=== Starting Management Node ==="
+echo "=== Starting Management Node (PostgreSQL) ==="
 
 # ---------------------------------------------------------------
 # PostgreSQL Setup
@@ -42,25 +42,14 @@ until su - postgres -c "${PG_BIN}/pg_isready -h localhost" >/dev/null 2>&1; do
 done
 echo "PostgreSQL is ready."
 
-# Create the metastore database and user (idempotent)
-if ! su - postgres -c "psql -tc \"SELECT 1 FROM pg_database WHERE datname = 'metastore'\"" | grep -q 1; then
-    echo "Creating metastore database and user..."
-    su - postgres -c "psql -f /opt/scripts/init-metastore-db.sql"
-    echo "Metastore database created."
+# Create application databases (idempotent)
+if ! su - postgres -c "psql -tc \"SELECT 1 FROM pg_database WHERE datname = 'dagster'\"" | grep -q 1; then
+    echo "Creating application databases..."
+    su - postgres -c "psql -f /opt/scripts/init-postgres-databases.sql"
+    echo "Application databases created."
 fi
 
-# ---------------------------------------------------------------
-# Hive Metastore Setup
-# ---------------------------------------------------------------
-echo "Setting up Hive Metastore..."
+echo "Management node ready — PostgreSQL listening on port 5432."
 
-# Initialise the Hive metastore schema if it hasn't been done yet
-if ! ${HIVE_HOME}/bin/schematool -info -dbType postgres 2>&1 | grep -qi "completed"; then
-    echo "Initialising Hive metastore schema..."
-    ${HIVE_HOME}/bin/schematool -initSchema -dbType postgres
-    echo "Hive metastore schema initialised."
-fi
-
-# Start the Hive Metastore Thrift service (foreground)
-echo "Starting Hive Metastore on port 9083..."
-exec ${HIVE_HOME}/bin/hive --service metastore
+# Keep container alive by tailing the log (pg_ctl runs in the background)
+exec tail -f "${PG_LOG}"

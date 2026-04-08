@@ -3,13 +3,13 @@ set -e
 
 echo "=== Starting Worker Node ==="
 
-# Wait for the Hive Metastore on the management node to become available
-echo "Waiting for Hive Metastore at management:9083..."
-until nc -z management 9083 2>/dev/null; do
-    echo "  Metastore not ready — retrying in 5 s..."
+# Wait for the Nessie catalog to become available
+echo "Waiting for Nessie at nessie:19120..."
+until nc -z nessie 19120 2>/dev/null; do
+    echo "  Nessie not ready — retrying in 5 s..."
     sleep 5
 done
-echo "Hive Metastore is available."
+echo "Nessie catalog is available."
 
 # Ensure DAGSTER_HOME exists
 mkdir -p "${DAGSTER_HOME}"

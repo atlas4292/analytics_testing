@@ -1,5 +1,5 @@
 # Worker Node: Spark + Python 3.12 + PostgreSQL client + Dagster
-# Connects to the Hive Metastore on the management node for catalog access.
+# Uses Nessie as the Iceberg catalog, MinIO for object storage.
 FROM python:3.12-slim-bookworm
 
 ARG SPARK_VERSION=3.5.3
@@ -52,7 +52,6 @@ RUN curl -fSL "https://repo1.maven.org/maven2/org/postgresql/postgresql/${PG_JDB
 # Copy Spark and Hadoop configuration
 COPY conf/spark-defaults.conf ${SPARK_HOME}/conf/spark-defaults.conf
 COPY conf/core-site.xml ${SPARK_HOME}/conf/core-site.xml
-COPY conf/spark-hive-site.xml ${SPARK_HOME}/conf/hive-site.xml
 
 # Install Python packages
 RUN pip install --no-cache-dir \
@@ -60,7 +59,7 @@ RUN pip install --no-cache-dir \
     dagster-webserver \
     dagster-postgres \
     pyspark==${SPARK_VERSION} \
-    "pyiceberg[s3fs,hive,pyarrow,pandas]" \
+    "pyiceberg[s3fs,pyarrow,pandas]" \
     psycopg2-binary \
     boto3 \
     pyarrow \

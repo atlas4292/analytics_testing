@@ -1,32 +1,12 @@
-# Management Node: PostgreSQL + Hadoop + Hive Metastore
-# Provides the Hive Metastore service backed by PostgreSQL for Spark workers.
+# Management Node: PostgreSQL
+# Provides a shared PostgreSQL instance for Dagster run storage, Nessie JDBC
+# backend, and general-purpose analytics databases.
 FROM ubuntu:24.04
 
-ARG HADOOP_VERSION=3.5.0
-ARG HIVE_VERSION=4.0.1
-ARG PG_JDBC_VERSION=42.7.4
+ENV DEBIAN_FRONTEND=noninteractive
 
-ENV DEBIAN_FRONTEND=noninteractive \
-    JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 \
-    HADOOP_HOME=/opt/hadoop \
-    HIVE_HOME=/opt/hive \
-    HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop \
-    PATH=/opt/hive/bin:/opt/hadoop/bin:/opt/hadoop/sbin:${PATH}
-
-# JDK 17 requires --add-opens flags for Hadoop/Hive reflection
-ENV HADOOP_OPTS="--add-opens java.base/java.lang=ALL-UNNAMED \
---add-opens java.base/java.lang.invoke=ALL-UNNAMED \
---add-opens java.base/java.io=ALL-UNNAMED \
---add-opens java.base/java.net=ALL-UNNAMED \
---add-opens java.base/java.nio=ALL-UNNAMED \
---add-opens java.base/java.util=ALL-UNNAMED \
---add-opens java.base/java.util.concurrent=ALL-UNNAMED \
---add-opens java.base/sun.nio.ch=ALL-UNNAMED \
---add-opens java.base/sun.nio.cs=ALL-UNNAMED"
-
-# Install system dependencies, JDK 17, and PostgreSQL 16
+# Install PostgreSQL 16 and a handful of utilities
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    openjdk-17-jdk-headless \
     postgresql-16 \
     postgresql-client-16 \
     curl \
@@ -40,39 +20,8 @@ RUN sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" \
         /etc/postgresql/16/main/postgresql.conf && \
     echo "host all all 0.0.0.0/0 scram-sha-256" >> /etc/postgresql/16/main/pg_hba.conf
 
-# Install Hadoop
-RUN curl -fSL "https://archive.apache.org/dist/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz" \
-    -o /tmp/hadoop.tar.gz && \
-    mkdir -p ${HADOOP_HOME} && \
-    tar -xzf /tmp/hadoop.tar.gz -C ${HADOOP_HOME} --strip-components=1 && \
-    rm /tmp/hadoop.tar.gz
-
-# Set JAVA_HOME in hadoop-env.sh
-RUN echo "export JAVA_HOME=${JAVA_HOME}" >> ${HADOOP_CONF_DIR}/hadoop-env.sh
-
-# Install Apache Hive (used for the standalone Metastore service)
-RUN curl -fSL "https://archive.apache.org/dist/hive/hive-${HIVE_VERSION}/apache-hive-${HIVE_VERSION}-bin.tar.gz" \
-    -o /tmp/hive.tar.gz && \
-    mkdir -p ${HIVE_HOME} && \
-    tar -xzf /tmp/hive.tar.gz -C ${HIVE_HOME} --strip-components=1 && \
-    rm /tmp/hive.tar.gz
-
-# Add PostgreSQL JDBC driver to Hive lib
-RUN curl -fSL "https://repo1.maven.org/maven2/org/postgresql/postgresql/${PG_JDBC_VERSION}/postgresql-${PG_JDBC_VERSION}.jar" \
-    -o ${HIVE_HOME}/lib/postgresql-jdbc.jar
-
-# Remove duplicate SLF4J bindings to avoid classpath conflicts between Hive and Hadoop
-RUN rm -f ${HIVE_HOME}/lib/log4j-slf4j-impl-*.jar 2>/dev/null || true
-
-# Copy Hadoop configuration (S3A / MinIO settings)
-COPY conf/core-site.xml ${HADOOP_CONF_DIR}/core-site.xml
-COPY conf/core-site.xml ${HIVE_HOME}/conf/core-site.xml
-
-# Copy Hive Metastore configuration
-COPY conf/hive-site.xml ${HIVE_HOME}/conf/hive-site.xml
-
 # Copy init and entrypoint scripts
-COPY scripts/init-metastore-db.sql /opt/scripts/init-metastore-db.sql
+COPY scripts/init-postgres-databases.sql /opt/scripts/init-postgres-databases.sql
 COPY scripts/management-entrypoint.sh /opt/scripts/management-entrypoint.sh
 RUN chmod +x /opt/scripts/management-entrypoint.sh
 
@@ -80,7 +29,6 @@ RUN chmod +x /opt/scripts/management-entrypoint.sh
 RUN mkdir -p /var/log/postgresql && chown postgres:postgres /var/log/postgresql && \
     mkdir -p /var/run/postgresql && chown postgres:postgres /var/run/postgresql
 
-# Hive Metastore Thrift port + PostgreSQL
-EXPOSE 9083 5432
+EXPOSE 5432
 
 ENTRYPOINT ["/opt/scripts/management-entrypoint.sh"]

@@ -3,6 +3,7 @@
 FROM python:3.12-slim-bookworm
 
 ARG SPARK_VERSION=3.5.3
+ARG ICEBERG_VERSION=1.7.1
 ARG HADOOP_AWS_VERSION=3.3.4
 ARG AWS_SDK_VERSION=1.12.262
 ARG PG_JDBC_VERSION=42.7.4
@@ -38,6 +39,12 @@ RUN curl -fSL "https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/${HAD
     curl -fSL "https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/${AWS_SDK_VERSION}/aws-java-sdk-bundle-${AWS_SDK_VERSION}.jar" \
     -o ${SPARK_HOME}/jars/aws-java-sdk-bundle-${AWS_SDK_VERSION}.jar
 
+# Add Apache Iceberg runtime for Spark
+RUN curl -fSL "https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/${ICEBERG_VERSION}/iceberg-spark-runtime-3.5_2.12-${ICEBERG_VERSION}.jar" \
+    -o ${SPARK_HOME}/jars/iceberg-spark-runtime.jar && \
+    curl -fSL "https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-aws-bundle/${ICEBERG_VERSION}/iceberg-aws-bundle-${ICEBERG_VERSION}.jar" \
+    -o ${SPARK_HOME}/jars/iceberg-aws-bundle.jar
+
 # Add PostgreSQL JDBC driver for Spark SQL
 RUN curl -fSL "https://repo1.maven.org/maven2/org/postgresql/postgresql/${PG_JDBC_VERSION}/postgresql-${PG_JDBC_VERSION}.jar" \
     -o ${SPARK_HOME}/jars/postgresql-jdbc.jar
@@ -53,6 +60,7 @@ RUN pip install --no-cache-dir \
     dagster-webserver \
     dagster-postgres \
     pyspark==${SPARK_VERSION} \
+    "pyiceberg[s3fs,hive,pyarrow,pandas]" \
     psycopg2-binary \
     boto3 \
     pyarrow \

@@ -1,0 +1,33 @@
+# MinIO S3-Compatible Object Storage Container
+# This container provides local S3-compatible storage for development/testing
+FROM minio/minio:latest
+
+# Set environment variables
+ENV MINIO_ROOT_USER=minioadmin \
+    MINIO_ROOT_PASSWORD=minioadmin123 \
+    MINIO_CONSOLE_ADDRESS=:9001
+
+# Create minio user and group
+USER root
+RUN addgroup -S minio && adduser -S minio -G minio
+
+# Create data directory
+RUN mkdir -p /data && \
+    chown -R minio:minio /data
+
+# Create configuration directory  
+RUN mkdir -p /root/.minio && \
+    chown -R minio:minio /root/.minio
+
+# Expose MinIO API and Console ports
+EXPOSE 9000 9001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=20s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:9000/minio/health/live || exit 1
+
+# Switch to minio user
+USER minio
+
+# Default command - start MinIO server
+CMD ["minio", "server", "/data", "--console-address", ":9001"]

@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # MinIO S3-Compatible Object Storage
+  minio-storage:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.minion
+    container_name: minio-storage
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+      MINIO_CONSOLE_ADDRESS: ":9001"
+    ports:
+      - "9000:9000"  # MinIO API port
+      - "9001:9001"  # MinIO Console UI port
+    volumes:
+      - minio_data:/data
+      - minio_config:/root/.minio
+    networks:
+      - storage-network
+    command: ["minio", "server", "/data", "--console-address", ":9001"]
+
+  # MinIO Client (mc) for bucket setup and management
+  minio-client:
+    image: minio/mc:latest
+    container_name: minio-client
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    volumes:
+      - ./minio-setup.sh:/setup.sh:ro
+    networks:
+      - storage-network
+    depends_on:
+      - minio-storage
+    profiles:
+      - setup
+    entrypoint: ["/bin/sh", "/setup.sh"]
+
+  # Optional: Create a second MinIO instance for replication
+  minio-replica:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.minion
+    container_name: minio-replica
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+      MINIO_CONSOLE_ADDRESS: ":9002"
+    ports:
+      - "9010:9000"  # MinIO API port (replica)
+      - "9002:9002"  # MinIO Console UI port (replica)
+    volumes:
+      - minio_replica_data:/data
+      - minio_replica_config:/root/.minio
+    networks:
+      - storage-network
+    command: ["minio", "server", "/data", "--console-address", ":9002"]
+    profiles:
+      - replica
+
+volumes:
+  minio_data:
+  minio_config:
+  minio_replica_data:
+  minio_replica_config:
+
+networks:
+  storage-network:
+    driver: bridge

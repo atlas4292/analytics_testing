@@ -94,11 +94,58 @@ services:
       retries: 5
       start_period: 60s
 
+  # Management Node — PostgreSQL + Hadoop Hive Metastore
+  management:
+    build:
+      context: ..
+      dockerfile: dockerfiles/Dockerfile.management
+    container_name: management
+    hostname: management
+    ports:
+      - "9083:9083"   # Hive Metastore Thrift
+      - "5432:5432"   # PostgreSQL
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    networks:
+      - storage-network
+    depends_on:
+      - minio-storage
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -U postgres && nc -z localhost 9083"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  # Worker Node — Spark + Python 3.12 + PostgreSQL client + Dagster
+  worker:
+    build:
+      context: ..
+      dockerfile: dockerfiles/Dockerfile.worker
+    container_name: spark-worker
+    hostname: worker
+    ports:
+      - "3000:3000"   # Dagster webserver
+      - "4040:4040"   # Spark UI
+    volumes:
+      - ../../projects:/opt/projects:ro
+      - ../../deployments:/opt/deployments:ro
+    environment:
+      DAGSTER_HOME: /opt/dagster
+    networks:
+      - storage-network
+    depends_on:
+      management:
+        condition: service_healthy
+      minio-storage:
+        condition: service_started
+
 volumes:
   minio_data:
   minio_config:
   minio_replica_data:
   minio_replica_config:
+  postgres_data:
 
 networks:
   storage-network:

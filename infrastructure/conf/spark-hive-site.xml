@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!-- Minimal hive-site.xml for Spark workers — only needs the Metastore URI -->
+<configuration>
+  <property>
+    <name>hive.metastore.uris</name>
+    <value>thrift://management:9083</value>
+  </property>
+  <property>
+    <name>hive.metastore.warehouse.dir</name>
+    <value>s3a://analytics-data/warehouse</value>
+  </property>
+</configuration>

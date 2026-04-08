@@ -12,6 +12,8 @@ dependencies = [
     "dagster-dg-cli>=1.12.22",
     "dbt-duckdb>=1.10.1",
     "pandas>=3.0.2",
+    "pyarrow>=23.0.1",
+    "pynessie>=0.67.0",
     "ruff>=0.15.9",
 ]
 

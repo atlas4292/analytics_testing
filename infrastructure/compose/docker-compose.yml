@@ -60,6 +60,40 @@ services:
     profiles:
       - replica
 
+  # Nessie - Data Catalog using MinIO for storage
+  nessie:
+    image: ghcr.io/projectnessie/nessie:latest
+    container_name: nessie
+    restart: unless-stopped
+    ports:
+      - "19120:19120"  # Nessie REST API port
+    environment:
+      # Nessie configuration using MinIO S3-compatible storage
+      quarkus.log.level: INFO
+      nessie.version.store.type: JDBC
+      # Database configuration (using in-memory H2 for simplicity)
+      quarkus.datasource.jdbc.url: jdbc:h2:mem:nessie;DB_CLOSE_DELAY=-1
+      quarkus.datasource.username: nessie
+      quarkus.datasource.password: nessie
+      # S3 storage configuration for MinIO
+      nessie.version.store.persist.s3.default-options.endpoint: http://minio-storage:9000
+      nessie.version.store.persist.s3.default-options.region: us-east-1
+      nessie.version.store.persist.s3.default-options.path-style-access: true
+      nessie.version.store.persist.s3.default-options.access-key-id: minioadmin
+      nessie.version.store.persist.s3.default-options.secret-access-key: minioadmin123
+      nessie.version.store.persist.s3.bucket: nessie-catalog
+      nessie.version.store.persist.s3.request.signer-override: S3V4SignerType
+    depends_on:
+      - minio-storage
+    networks:
+      - storage-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:19120/api/v1/config"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
 volumes:
   minio_data:
   minio_config:

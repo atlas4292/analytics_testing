@@ -118,6 +118,26 @@ services:
       retries: 5
       start_period: 30s
 
+  # Kafka Broker — KRaft mode (single-node, no ZooKeeper)
+  kafka:
+    build:
+      context: ..
+      dockerfile: dockerfiles/Dockerfile.kafka
+    container_name: kafka
+    hostname: kafka
+    ports:
+      - "9094:9094"   # Kafka external listener
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - storage-network
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
   # Worker Node — Spark + Iceberg + Nessie + Python 3.12 + Dagster
   worker:
     build:
@@ -154,6 +174,7 @@ volumes:
   minio_replica_data:
   minio_replica_config:
   postgres_data:
+  kafka_data:
 
 networks:
   storage-network:

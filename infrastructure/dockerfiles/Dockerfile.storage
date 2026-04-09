@@ -1,0 +1,34 @@
+# Storage Node: MinIO + Iceberg / PyIceberg
+# Provides local S3-compatible object storage (MinIO) alongside the PyIceberg
+# library for Iceberg table management.
+FROM python:3.12-slim-bookworm
+
+# Install MinIO server binary and utilities
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && curl -fSL "https://dl.min.io/server/minio/release/linux-amd64/minio" \
+       -o /usr/local/bin/minio \
+    && chmod +x /usr/local/bin/minio \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Iceberg / PyIceberg Python packages
+RUN pip install --no-cache-dir \
+    "pyiceberg[s3fs,pyarrow,pandas]" \
+    pyarrow \
+    pandas \
+    boto3
+
+# Set environment variables
+ENV MINIO_ROOT_USER=minioadmin \
+    MINIO_ROOT_PASSWORD=minioadmin123 \
+    MINIO_CONSOLE_ADDRESS=:9001
+
+# Expose MinIO API and Console ports
+EXPOSE 9000 9001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=20s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:9000/minio/health/live || exit 1
+
+# Default command - start MinIO server
+CMD ["minio", "server", "/data", "--console-address", ":9001"]

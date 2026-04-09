@@ -5,7 +5,7 @@ services:
   minio-storage:
     build:
       context: ..
-      dockerfile: dockerfiles/Dockerfile.minion
+      dockerfile: dockerfiles/Dockerfile.storage
     container_name: minio-storage
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -42,7 +42,7 @@ services:
   minio-replica:
     build:
       context: ..
-      dockerfile: dockerfiles/Dockerfile.minion
+      dockerfile: dockerfiles/Dockerfile.storage
     container_name: minio-replica
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -98,15 +98,18 @@ services:
       retries: 5
       start_period: 60s
 
-  # Management Node — PostgreSQL (shared DB for Dagster, Nessie JDBC, etc.)
+  # Management Node — PostgreSQL + Dagster + Nessie client
   management:
     build:
       context: ..
       dockerfile: dockerfiles/Dockerfile.management
     container_name: management
     hostname: management
+    environment:
+      DAGSTER_HOME: /opt/dagster
     ports:
       - "5432:5432"   # PostgreSQL
+      - "3000:3000"   # Dagster webserver
     volumes:
       - postgres_data:/var/lib/postgresql
     networks:
@@ -122,7 +125,7 @@ services:
   kafka:
     build:
       context: ..
-      dockerfile: dockerfiles/Dockerfile.kafka
+      dockerfile: dockerfiles/Dockerfile.ingestion
     container_name: kafka
     hostname: kafka
     ports:
@@ -138,21 +141,19 @@ services:
       retries: 5
       start_period: 30s
 
-  # Worker Node — Spark + Iceberg + Nessie + Python 3.12 + Dagster
+  # Worker Node — Spark + Trino + Python 3.12
   worker:
     build:
       context: ..
-      dockerfile: dockerfiles/Dockerfile.worker
+      dockerfile: dockerfiles/Dockerfile.processing
     container_name: spark-worker
     hostname: worker
     ports:
-      - "3000:3000"   # Dagster webserver
       - "4040:4040"   # Spark UI
     volumes:
       - ../../projects:/opt/projects:ro
       - ../../deployments:/opt/deployments:ro
     environment:
-      DAGSTER_HOME: /opt/dagster
       PYICEBERG_CATALOG__NESSIE__TYPE: rest
       PYICEBERG_CATALOG__NESSIE__URI: http://nessie:19120/iceberg
       PYICEBERG_CATALOG__NESSIE__S3__ENDPOINT: http://minio-storage:9000

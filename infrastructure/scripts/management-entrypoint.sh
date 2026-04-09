@@ -43,5 +43,14 @@ fi
 
 echo "Management node ready — PostgreSQL listening on port 5432."
 
+# ---------------------------------------------------------------
+# Dagster Webserver
+# ---------------------------------------------------------------
+echo "Starting Dagster webserver on port 3000..."
+mkdir -p "${DAGSTER_HOME}"
+dagster-webserver -h 0.0.0.0 -p 3000 &
+
+echo "Dagster webserver started."
+
 # Keep container alive by tailing the log (pg_ctlcluster runs in the background)
 exec tail -f "${PG_LOG}"

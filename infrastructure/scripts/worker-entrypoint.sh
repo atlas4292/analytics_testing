@@ -11,13 +11,9 @@ until nc -z nessie 19120 2>/dev/null; do
 done
 echo "Nessie catalog is available."
 
-# Ensure DAGSTER_HOME exists
-mkdir -p "${DAGSTER_HOME}"
-
 echo "Worker node ready."
 echo "  Spark  : ${SPARK_HOME}"
 echo "  Python : $(python3 --version)"
-echo "  Dagster: $(dagster --version 2>/dev/null || echo 'not installed')"
 
 # Hand off to the CMD (default: tail -f /dev/null to keep the container alive)
 exec "$@"

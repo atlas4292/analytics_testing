@@ -1,9 +1,8 @@
-# Worker Node: Spark + Python 3.12 + PostgreSQL client + Dagster
+# Worker Node: Spark + Trino + Python 3.12
 # Uses Nessie as the Iceberg catalog, MinIO for object storage.
 FROM python:3.12-slim-bookworm
 
 ARG SPARK_VERSION=3.5.3
-ARG ICEBERG_VERSION=1.7.1
 ARG HADOOP_AWS_VERSION=3.3.4
 ARG AWS_SDK_VERSION=1.12.262
 ARG PG_JDBC_VERSION=42.7.4
@@ -12,7 +11,6 @@ ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 \
     SPARK_HOME=/opt/spark \
     HADOOP_CONF_DIR=/opt/spark/conf \
     PATH=/opt/spark/bin:${PATH} \
-    DAGSTER_HOME=/opt/dagster \
     PYSPARK_PYTHON=python3
 
 # Install system dependencies: JDK 17, PostgreSQL client, build tools
@@ -39,12 +37,6 @@ RUN curl -fSL "https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/${HAD
     curl -fSL "https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/${AWS_SDK_VERSION}/aws-java-sdk-bundle-${AWS_SDK_VERSION}.jar" \
     -o ${SPARK_HOME}/jars/aws-java-sdk-bundle-${AWS_SDK_VERSION}.jar
 
-# Add Apache Iceberg runtime for Spark
-RUN curl -fSL "https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/${ICEBERG_VERSION}/iceberg-spark-runtime-3.5_2.12-${ICEBERG_VERSION}.jar" \
-    -o ${SPARK_HOME}/jars/iceberg-spark-runtime.jar && \
-    curl -fSL "https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-aws-bundle/${ICEBERG_VERSION}/iceberg-aws-bundle-${ICEBERG_VERSION}.jar" \
-    -o ${SPARK_HOME}/jars/iceberg-aws-bundle.jar
-
 # Add PostgreSQL JDBC driver for Spark SQL
 RUN curl -fSL "https://repo1.maven.org/maven2/org/postgresql/postgresql/${PG_JDBC_VERSION}/postgresql-${PG_JDBC_VERSION}.jar" \
     -o ${SPARK_HOME}/jars/postgresql-jdbc.jar
@@ -55,25 +47,18 @@ COPY conf/core-site.xml ${SPARK_HOME}/conf/core-site.xml
 
 # Install Python packages
 RUN pip install --no-cache-dir \
-    dagster \
-    dagster-webserver \
-    dagster-postgres \
     pyspark==${SPARK_VERSION} \
-    "pyiceberg[s3fs,pyarrow,pandas]" \
-    psycopg2-binary \
+    trino \
     boto3 \
     pyarrow \
     pandas
-
-# Create Dagster home directory
-RUN mkdir -p ${DAGSTER_HOME}
 
 # Copy entrypoint script
 COPY scripts/worker-entrypoint.sh /opt/scripts/worker-entrypoint.sh
 RUN chmod +x /opt/scripts/worker-entrypoint.sh
 
-# Dagster webserver + Spark UI
-EXPOSE 3000 4040
+# Spark UI
+EXPOSE 4040
 
 ENTRYPOINT ["/opt/scripts/worker-entrypoint.sh"]
 CMD ["tail", "-f", "/dev/null"]

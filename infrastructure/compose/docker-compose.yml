@@ -5,7 +5,7 @@ services:
   minio-storage:
     build:
       context: ..
-      dockerfile: docker/Dockerfile.minion
+      dockerfile: dockerfiles/Dockerfile.minion
     container_name: minio-storage
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -29,7 +29,7 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin123
     volumes:
-      - ./minio-setup.sh:/setup.sh:ro
+      - ../scripts/minio-setup.sh:/setup.sh:ro
     networks:
       - storage-network
     depends_on:
@@ -42,7 +42,7 @@ services:
   minio-replica:
     build:
       context: ..
-      dockerfile: docker/Dockerfile.minion
+      dockerfile: dockerfiles/Dockerfile.minion
     container_name: minio-replica
     environment:
       MINIO_ROOT_USER: minioadmin

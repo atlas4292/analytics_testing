@@ -12,7 +12,7 @@ This setup provides a complete data lakehouse catalog solution using Nessie with
 
 1. **Start the full stack:**
    ```bash
-   cd infrastructure/setup_scripts
+   cd infrastructure/scripts
    chmod +x start-nessie-stack.sh
    ./start-nessie-stack.sh
    ```

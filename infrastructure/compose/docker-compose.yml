@@ -5,7 +5,7 @@ services:
   minio-storage:
     build:
       context: ..
-      dockerfile: docker/Dockerfile.minion
+      dockerfile: dockerfiles/Dockerfile.minion
     container_name: minio-storage
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -29,7 +29,7 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin123
     volumes:
-      - ./minio-setup.sh:/setup.sh:ro
+      - ../scripts/minio-setup.sh:/setup.sh:ro
     networks:
       - storage-network
     depends_on:
@@ -42,7 +42,7 @@ services:
   minio-replica:
     build:
       context: ..
-      dockerfile: docker/Dockerfile.minion
+      dockerfile: dockerfiles/Dockerfile.minion
     container_name: minio-replica
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -60,11 +60,100 @@ services:
     profiles:
       - replica
 
+  # Nessie - Data Catalog using MinIO for storage
+  nessie:
+    image: ghcr.io/projectnessie/nessie:latest
+    container_name: nessie
+    restart: unless-stopped
+    ports:
+      - "19120:19120"  # Nessie REST API port
+    environment:
+      # Nessie configuration using MinIO S3-compatible storage
+      quarkus.log.level: INFO
+      nessie.version.store.type: JDBC
+      # PostgreSQL backend via the management container
+      nessie.version.store.persist.jdbc.datasource: postgresql
+      quarkus.datasource.postgresql.jdbc.url: jdbc:postgresql://management:5432/nessie
+      quarkus.datasource.postgresql.username: nessie
+      quarkus.datasource.postgresql.password: nessie
+      # S3 storage configuration for MinIO
+      nessie.version.store.persist.s3.default-options.endpoint: http://minio-storage:9000
+      nessie.version.store.persist.s3.default-options.region: us-east-1
+      nessie.version.store.persist.s3.default-options.path-style-access: true
+      nessie.version.store.persist.s3.default-options.access-key-id: minioadmin
+      nessie.version.store.persist.s3.default-options.secret-access-key: minioadmin123
+      nessie.version.store.persist.s3.bucket: nessie-catalog
+      nessie.version.store.persist.s3.request.signer-override: S3V4SignerType
+    depends_on:
+      minio-storage:
+        condition: service_started
+      management:
+        condition: service_healthy
+    networks:
+      - storage-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:19120/api/v1/config"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Management Node — PostgreSQL (shared DB for Dagster, Nessie JDBC, etc.)
+  management:
+    build:
+      context: ..
+      dockerfile: dockerfiles/Dockerfile.management
+    container_name: management
+    hostname: management
+    ports:
+      - "5432:5432"   # PostgreSQL
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    networks:
+      - storage-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -U postgres"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Worker Node — Spark + Iceberg + Nessie + Python 3.12 + Dagster
+  worker:
+    build:
+      context: ..
+      dockerfile: dockerfiles/Dockerfile.worker
+    container_name: spark-worker
+    hostname: worker
+    ports:
+      - "3000:3000"   # Dagster webserver
+      - "4040:4040"   # Spark UI
+    volumes:
+      - ../../projects:/opt/projects:ro
+      - ../../deployments:/opt/deployments:ro
+    environment:
+      DAGSTER_HOME: /opt/dagster
+      PYICEBERG_CATALOG__NESSIE__TYPE: rest
+      PYICEBERG_CATALOG__NESSIE__URI: http://nessie:19120/iceberg
+      PYICEBERG_CATALOG__NESSIE__S3__ENDPOINT: http://minio-storage:9000
+      PYICEBERG_CATALOG__NESSIE__S3__ACCESS_KEY_ID: minioadmin
+      PYICEBERG_CATALOG__NESSIE__S3__SECRET_ACCESS_KEY: minioadmin123
+      PYICEBERG_CATALOG__NESSIE__S3__PATH_STYLE_ACCESS: "true"
+      PYICEBERG_CATALOG__NESSIE__WAREHOUSE: s3a://analytics-data/warehouse
+    networks:
+      - storage-network
+    depends_on:
+      nessie:
+        condition: service_healthy
+      minio-storage:
+        condition: service_started
+
 volumes:
   minio_data:
   minio_config:
   minio_replica_data:
   minio_replica_config:
+  postgres_data:
 
 networks:
   storage-network:

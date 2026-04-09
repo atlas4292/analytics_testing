@@ -1,0 +1,34 @@
+# Management Node: PostgreSQL
+# Provides a shared PostgreSQL instance for Dagster run storage, Nessie JDBC
+# backend, and general-purpose analytics databases.
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install PostgreSQL 16 and a handful of utilities
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-16 \
+    postgresql-client-16 \
+    curl \
+    netcat-openbsd \
+    procps \
+    sudo \
+    && rm -rf /var/lib/apt/lists/*
+
+# Configure PostgreSQL for network access
+RUN sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" \
+        /etc/postgresql/16/main/postgresql.conf && \
+    echo "host all all 0.0.0.0/0 scram-sha-256" >> /etc/postgresql/16/main/pg_hba.conf
+
+# Copy init and entrypoint scripts
+COPY scripts/init-postgres-databases.sql /opt/scripts/init-postgres-databases.sql
+COPY scripts/management-entrypoint.sh /opt/scripts/management-entrypoint.sh
+RUN chmod +x /opt/scripts/management-entrypoint.sh
+
+# Ensure required directories exist with correct ownership
+RUN mkdir -p /var/log/postgresql && chown postgres:postgres /var/log/postgresql && \
+    mkdir -p /var/run/postgresql && chown postgres:postgres /var/run/postgresql
+
+EXPOSE 5432
+
+ENTRYPOINT ["/opt/scripts/management-entrypoint.sh"]

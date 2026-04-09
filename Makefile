@@ -1,75 +1,142 @@
-# MinIO S3-Compatible Storage Management
-.PHONY: help build up down restart logs clean setup-buckets
+# Analytics Testing — Infrastructure Management
+COMPOSE = cd infrastructure/compose && docker-compose
+
+.PHONY: help build up down restart logs logs-f clean status \
+        setup-buckets replica \
+        minio-up minio-down minio-logs minio-shell mc-shell \
+        nessie-up nessie-down nessie-logs \
+        management-up management-down management-logs management-shell \
+        worker-up worker-down worker-logs worker-shell
+
+# ─── Main Commands ────────────────────────────────────────────────
 
 # Default target
 help:
-	@echo "Available commands:"
-	@echo "  build          - Build the MinIO container"
-	@echo "  up             - Start MinIO storage service"
-	@echo "  down           - Stop MinIO service"
-	@echo "  restart        - Restart MinIO service"
-	@echo "  logs           - Show MinIO logs"
-	@echo "  logs-f         - Follow MinIO logs"
-	@echo "  setup-buckets  - Create initial buckets and configure MinIO"
-	@echo "  clean          - Remove containers and volumes"
-	@echo "  shell          - Open shell in MinIO container"
-	@echo "  status         - Check MinIO status"
-	@echo "  replica        - Start with replication (2 MinIO instances)"
-	@echo "  mc-shell       - Open MinIO client shell for management"
+	@echo "Main commands:"
+	@echo "  build              - Build all containers"
+	@echo "  up                 - Start all services"
+	@echo "  down               - Stop all services"
+	@echo "  restart            - Restart all services"
+	@echo "  logs               - Show logs for all services"
+	@echo "  logs-f             - Follow logs for all services"
+	@echo "  status             - Show status and service URLs"
+	@echo "  clean              - Remove all containers and volumes"
+	@echo "  setup-buckets      - Create initial MinIO buckets"
+	@echo "  replica            - Start with MinIO replication"
+	@echo ""
+	@echo "Per-component commands:"
+	@echo "  minio-up/down/logs/shell   - Manage MinIO storage"
+	@echo "  mc-shell                   - Open MinIO client shell"
+	@echo "  nessie-up/down/logs        - Manage Nessie catalog"
+	@echo "  management-up/down/logs/shell - Manage PostgreSQL"
+	@echo "  worker-up/down/logs/shell  - Manage Spark/Dagster worker"
 
-# Build the MinIO container
+# Build all containers
 build:
-	cd docker && docker-compose build
+	$(COMPOSE) build
 
-# Start MinIO service
+# Start all services
 up:
-	cd docker && docker-compose up -d minio-storage
+	$(COMPOSE) up -d
 
-# Start with replica
-replica:
-	cd docker && docker-compose --profile replica up -d
-
-# Stop MinIO service
+# Stop all services
 down:
-	cd docker && docker-compose down
+	$(COMPOSE) down
 
-# Restart MinIO service
+# Restart all services
 restart: down up
 
-# Show logs
+# Show logs for all services
 logs:
-	cd docker && docker-compose logs minio-storage
+	$(COMPOSE) logs
 
-# Follow logs
+# Follow logs for all services
 logs-f:
-	cd docker && docker-compose logs -f minio-storage
+	$(COMPOSE) logs -f
 
-# Setup initial buckets
-setup-buckets:
-	cd docker && chmod +x minio-setup.sh && docker-compose --profile setup run --rm minio-client
-
-# Open shell in MinIO container
-shell:
-	cd docker && docker-compose exec minio-storage sh
-
-# Open MinIO client shell for management
-mc-shell:
-	cd docker && docker-compose run --rm minio-client sh
-
-# Clean up containers and volumes
+# Clean up all containers and volumes
 clean:
-	cd docker && docker-compose down -v --remove-orphans
+	$(COMPOSE) down -v --remove-orphans
 	docker system prune -f
 
 # Check status
 status:
-	cd docker && docker-compose ps
+	$(COMPOSE) ps
 	@echo ""
-	@echo "MinIO Console: http://localhost:9001"
-	@echo "MinIO API:     http://localhost:9000"
-	@echo "Login:         minioadmin / minioadmin123"
+	@echo "Service URLs:"
+	@echo "  MinIO Console:  http://localhost:9001  (minioadmin / minioadmin123)"
+	@echo "  MinIO API:      http://localhost:9000"
+	@echo "  Nessie API:     http://localhost:19120"
+	@echo "  Dagster UI:     http://localhost:3000"
+	@echo "  Spark UI:       http://localhost:4040"
+	@echo "  PostgreSQL:     localhost:5432"
 
-# Test S3 connectivity
+# Setup initial buckets
+setup-buckets:
+	chmod +x infrastructure/scripts/minio-setup.sh && $(COMPOSE) --profile setup run --rm minio-client
+
+# Start with MinIO replica
+replica:
+	$(COMPOSE) --profile replica up -d
+
+# ─── MinIO ────────────────────────────────────────────────────────
+
+minio-up:
+	$(COMPOSE) up -d minio-storage
+
+minio-down:
+	$(COMPOSE) stop minio-storage
+
+minio-logs:
+	$(COMPOSE) logs -f minio-storage
+
+minio-shell:
+	$(COMPOSE) exec minio-storage sh
+
+mc-shell:
+	$(COMPOSE) run --rm minio-client sh
+
+# ─── Nessie ───────────────────────────────────────────────────────
+
+nessie-up:
+	$(COMPOSE) up -d nessie
+
+nessie-down:
+	$(COMPOSE) stop nessie
+
+nessie-logs:
+	$(COMPOSE) logs -f nessie
+
+# ─── Management (PostgreSQL) ─────────────────────────────────────
+
+management-up:
+	$(COMPOSE) up -d management
+
+management-down:
+	$(COMPOSE) stop management
+
+management-logs:
+	$(COMPOSE) logs -f management
+
+management-shell:
+	$(COMPOSE) exec management psql -U postgres
+
+# ─── Worker (Spark + Dagster) ────────────────────────────────────
+
+worker-up:
+	$(COMPOSE) up -d worker
+
+worker-down:
+	$(COMPOSE) stop worker
+
+worker-logs:
+	$(COMPOSE) logs -f worker
+
+worker-shell:
+	$(COMPOSE) exec spark-worker bash
+
+# ─── Testing ─────────────────────────────────────────────────────
+
 test:
 	@echo "Testing S3 connectivity..."
-	cd docker && docker-compose run --rm minio-client mc ls local/ || echo "MinIO not accessible"
+	$(COMPOSE) run --rm minio-client mc ls local/ || echo "MinIO not accessible"

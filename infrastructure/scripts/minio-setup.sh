@@ -19,6 +19,7 @@ buckets=(
   "dad-jokes"
   "dagster-tutorial"
   "dbt-test"
+  "nessie-catalog"
   "temp-files"
   "backups"
 )
